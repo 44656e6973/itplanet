@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Map } from '../components/map/Map';
 import { AddMarkerForm } from '../components/map/AddMarkerForm';
+import { Header } from '../components/common/Header';
 import { useMarkers, useMapView } from '../hooks/useMap';
 import type { Coordinates } from '../types';
 
@@ -22,6 +23,11 @@ export function MapPage() {
 
   return (
     <div className="relative h-screen w-screen">
+      {/* Header */}
+      <div className="absolute top-0 left-0 right-0 z-[1001]">
+        <Header />
+      </div>
+
       {/* Карта */}
       <Map onMapClick={handleMapClick} />
 

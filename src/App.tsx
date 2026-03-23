@@ -1,7 +1,8 @@
-import { MapPage } from './pages/MapPage'
+import { RouterProvider } from 'react-router-dom'
+import { router } from './router'
 
 function App() {
-  return <MapPage />
+  return <RouterProvider router={router} />
 }
 
 export default App

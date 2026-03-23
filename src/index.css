@@ -1,9 +1,7 @@
+@import 'tailwindcss';
+
 /* Leaflet CSS */
 @import 'leaflet/dist/leaflet.css';
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 
 @media (prefers-color-scheme: dark) {
   :root {
@@ -26,19 +24,33 @@
 }
 
 #root {
-  width: 1126px;
+  width: 100%;
   max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+  margin: 0;
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
 body {
-  margin: 0;
+  font-family: system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Скроллбар (опционально) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1a2e;
+}
+::-webkit-scrollbar-thumb {
+  background: #4a4e69;
+  border-radius: 4px;
 }
 
 h1,
