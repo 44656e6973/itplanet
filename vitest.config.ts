@@ -7,12 +7,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
-    css: false,
-    exclude: ['**/node_modules/**', '**/dist/**', '**/*.css'],
   },
-  css: {
-    modules: {
-      generateScopedName: '[name]_[local]_[hash:base64]',
-    },
+  resolve: {
+    conditions: ['development', 'browser'],
   },
 });
