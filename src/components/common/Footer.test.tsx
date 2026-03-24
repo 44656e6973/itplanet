@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 // Мок для CSS модулей
-vi.mock('../../index.css', () => ({}));
+vi.mock('../../tailwind.css', () => ({}));
 
 describe('Footer', () => {
   it('рендерит название компании', async () => {

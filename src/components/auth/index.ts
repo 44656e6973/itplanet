@@ -1,3 +1,4 @@
-export { Registration } from './Registration';
+export { Element } from './Screen';
 export { LoginForm } from './LoginForm';
-export type { Role } from './types';
+export { Registration } from './Registration';
+export type { Role, LoginData, LoginFormProps, RegistrationData, RegistrationFormProps } from './types';

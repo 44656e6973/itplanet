@@ -30,9 +30,11 @@ interface MapProps {
   className?: string;
   onMarkerClick?: (id: string) => void;
   onMapClick?: (coords: Coordinates) => void;
+  center?: Coordinates;
+  zoom?: number;
 }
 
-export function Map({ className = 'h-full w-full', onMarkerClick, onMapClick }: MapProps) {
+export function Map({ className = 'h-full w-full', onMarkerClick, onMapClick, center = { lat: 55.7558, lng: 37.6173 }, zoom = 10 }: MapProps) {
   const { markers, removeMarker } = useMarkers();
   const { selectMarker } = useSelectedMarker();
 
@@ -45,6 +47,8 @@ export function Map({ className = 'h-full w-full', onMarkerClick, onMapClick }: 
   return (
     <MapContainer
       className={className}
+      center={[center.lat, center.lng]}
+      zoom={zoom}
       scrollWheelZoom={true}
     >
       <TileLayer

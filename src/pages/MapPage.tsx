@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Map } from '../components/map/Map';
 import { AddMarkerForm } from '../components/map/AddMarkerForm';
 import { Header } from '../components/common/Header';
 import { useMarkers, useMapView } from '../hooks/useMap';
@@ -11,25 +10,27 @@ export function MapPage() {
   const { markers } = useMarkers();
   const { center, zoom, resetMap } = useMapView();
 
-  const handleMapClick = (coords: Coordinates) => {
-    setClickPosition(coords);
-    setShowAddMarker(true);
-  };
-
   const handleCloseForm = () => {
     setShowAddMarker(false);
     setClickPosition(null);
   };
 
   return (
-    <div className="relative h-screen w-screen">
+    <div className="relative h-screen w-screen bg-gray-100">
       {/* Header */}
       <div className="absolute top-0 left-0 right-0 z-[1001]">
         <Header />
       </div>
 
-      {/* Карта */}
-      <Map onMapClick={handleMapClick} />
+      {/* Карта - временно отключена для отладки */}
+      <div className="h-full w-full flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold mb-4">Map Page</h1>
+          <p className="text-gray-600">Маркеров: {markers.length}</p>
+          <p className="text-gray-600">Центр: {center?.lat.toFixed(4)}, {center?.lng.toFixed(4)}</p>
+          <p className="text-gray-600">Зум: {zoom}</p>
+        </div>
+      </div>
 
       {/* UI панель */}
       <div className="absolute top-4 left-4 z-[1000] bg-white rounded-lg shadow-lg p-4 min-w-[200px]">
@@ -38,7 +39,7 @@ export function MapPage() {
         <div className="space-y-2">
           <div className="text-sm text-gray-600">
             <p>Маркеров: <span className="font-medium text-gray-900">{markers.length}</span></p>
-            <p>Центр: <span className="font-mono text-gray-900">{center.lat.toFixed(4)}, {center.lng.toFixed(4)}</span></p>
+            <p>Центр: <span className="font-mono text-gray-900">{center?.lat.toFixed(4)}, {center?.lng.toFixed(4)}</span></p>
             <p>Зум: <span className="font-medium text-gray-900">{zoom}</span></p>
           </div>
 

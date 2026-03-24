@@ -1,73 +1,85 @@
 import { useState } from 'react';
+import type { FormEvent, ChangeEvent } from 'react';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import type { LoginFormProps, LoginData } from './types';
 
-export interface LoginData {
-  email: string;
-  password: string;
-}
+export const LoginForm = ({ onSubmit, isLoading = false, error }: LoginFormProps) => {
+  const [formData, setFormData] = useState<LoginData>({
+    email: '',
+    password: '',
+  });
 
-export interface LoginFormProps {
-  onSubmit?: (data: LoginData) => void;
-  isLoading?: boolean;
-  error?: string | null;
-}
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-export const LoginForm = ({ onSubmit, isLoading = false, error = null }: LoginFormProps) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    onSubmit?.({ email, password });
+    onSubmit(formData);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="w-full max-w-[400px]">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       {error && (
-        <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
+        <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-2 rounded-lg text-sm">
           {error}
         </div>
       )}
 
-      <div className="mb-6">
-        <label htmlFor="email" className="block text-white text-sm font-normal mb-2">
+      <div className="flex flex-col gap-2">
+        <Label
+          htmlFor="email"
+          className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
+        >
           Email
-        </label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          disabled={isLoading}
-          placeholder="example@mail.ru"
-          className="w-full px-4 py-3 rounded-xl bg-[#eaffff] text-[#1a1a2e] text-sm outline-none border-2 border-transparent focus:border-[#4a4e69] placeholder:text-[#8a8aa8]"
-        />
+        </Label>
+        <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            value={formData.email}
+            onChange={handleChange}
+            disabled={isLoading}
+            className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
+            placeholder="Ввод"
+            required
+          />
+        </div>
       </div>
 
-      <div className="mb-6">
-        <label htmlFor="password" className="block text-white text-sm font-normal mb-2">
+      <div className="flex flex-col gap-2">
+        <Label
+          htmlFor="password"
+          className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
+        >
           Пароль
-        </label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          disabled={isLoading}
-          minLength={6}
-          placeholder="••••••••"
-          className="w-full px-4 py-3 rounded-xl bg-[#eaffff] text-[#1a1a2e] text-sm outline-none border-2 border-transparent focus:border-[#4a4e69] placeholder:text-[#8a8aa8]"
-        />
+        </Label>
+        <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            value={formData.password}
+            onChange={handleChange}
+            disabled={isLoading}
+            className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
+            placeholder="Ввод"
+            required
+          />
+        </div>
       </div>
 
-      <button
+      <Button
         type="submit"
         disabled={isLoading}
-        className="w-full py-3 mt-8 rounded-xl bg-[#eaffff] text-[#1a1a2e] text-sm font-medium transition-all duration-300 hover:opacity-90 disabled:opacity-60"
+        className="w-[415px] h-[41px] bg-[#eafffb] rounded-[15px] text-[#2d2a63] text-[22px] font-normal hover:bg-[#d0f5ee] disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {isLoading ? 'Вход...' : 'Войти'}
-      </button>
+      </Button>
     </form>
   );
 };
