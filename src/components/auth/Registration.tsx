@@ -8,19 +8,19 @@ import type { RegistrationFormProps, Role } from './types';
 interface BaseFormData {
   email: string;
   password: string;
-  phone: string;
 }
 
-interface ApplicantFormData extends BaseFormData {
+interface ApplicantFormData {
   role: 'applicant';
-  fullName: string;
-  position: string;
+  firstName: string;
+  lastName: string;
 }
 
 interface EmployerFormData extends BaseFormData {
   role: 'employer';
   companyName: string;
   inn: string;
+  phone: string;
 }
 
 type FormData = ApplicantFormData | EmployerFormData;
@@ -31,9 +31,8 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
     role: 'applicant',
     email: '',
     password: '',
-    fullName: '',
-    phone: '',
-    position: '',
+    firstName: '',
+    lastName: '',
   });
 
   const handleRoleChange = (role: Role) => {
@@ -52,9 +51,8 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
         role: 'applicant',
         email: '',
         password: '',
-        fullName: '',
-        phone: '',
-        position: '',
+        firstName: '',
+        lastName: '',
       });
     }
   };
@@ -155,16 +153,16 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
         <>
           <div className="flex flex-col gap-2">
             <Label
-              htmlFor="fullName"
+              htmlFor="lastName"
               className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
             >
-              ФИО
+              Фамилия
             </Label>
             <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
               <Input
-                id="fullName"
-                name="fullName"
-                value={(formData as ApplicantFormData).fullName}
+                id="lastName"
+                name="lastName"
+                value={(formData as ApplicantFormData).lastName}
                 onChange={handleChange}
                 disabled={isLoading}
                 className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
@@ -176,42 +174,21 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
 
           <div className="flex flex-col gap-2">
             <Label
-              htmlFor="phone"
+              htmlFor="firstName"
               className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
             >
-              Телефон
+              Имя
             </Label>
             <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
               <Input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={formData.phone}
+                id="firstName"
+                name="firstName"
+                value={(formData as ApplicantFormData).firstName}
                 onChange={handleChange}
                 disabled={isLoading}
                 className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
                 placeholder="Ввод"
                 required
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label
-              htmlFor="position"
-              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
-            >
-              Должность
-            </Label>
-            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
-              <Input
-                id="position"
-                name="position"
-                value={(formData as ApplicantFormData).position}
-                onChange={handleChange}
-                disabled={isLoading}
-                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
-                placeholder="Ввод"
               />
             </div>
           </div>

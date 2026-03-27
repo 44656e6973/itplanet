@@ -27,9 +27,8 @@ export interface EmployerRegistrationData extends BaseRegistrationData {
 
 export interface ApplicantRegistrationData extends BaseRegistrationData {
   role: 'applicant';
-  fullName: string;
-  phone: string;
-  position?: string;
+  firstName: string;
+  lastName: string;
 }
 
 export type RegistrationData = EmployerRegistrationData | ApplicantRegistrationData;

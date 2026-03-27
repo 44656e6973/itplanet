@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import type { RegistrationData } from '@/components/auth/types';
 
+// URL бэкенда API (замените на ваш)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
 export interface User {
   id: string;
   email: string;
@@ -25,25 +28,29 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
   error: null,
 
-  login: async (email: string, _password: string) => {
+  login: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
 
     try {
-      // TODO: Заменить на реальный API вызов
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      // Имитация успешного входа
-      const user: User = {
-        id: '1',
-        email,
-        role: 'employer',
-      };
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Ошибка ${response.status}`);
+      }
 
-      set({ user, isAuthenticated: true, isLoading: false });
+      const data = await response.json();
+      set({ user: data.user, isAuthenticated: true, isLoading: false });
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : 'Ошибка входа',
-        isLoading: false
+        isLoading: false,
       });
     }
   },
@@ -52,21 +59,43 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
 
     try {
-      // TODO: Заменить на реальный API вызов
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Преобразуем данные в формат бэкенда
+      const payload = data.role === 'applicant'
+        ? {
+            email: data.email,
+            password: data.password,
+            role: data.role,
+            first_name: (data as any).firstName || '',
+            last_name: (data as any).lastName || '',
+          }
+        : {
+            email: data.email,
+            password: data.password,
+            role: data.role,
+            company_name: (data as any).companyName || '',
+            inn: (data as any).inn || '',
+            phone: data.phone,
+          };
 
-      // Имитация успешной регистрации
-      const user: User = {
-        id: '1',
-        email: data.email,
-        role: data.role,
-      };
+      const response = await fetch(`${API_URL}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
 
-      set({ user, isAuthenticated: true, isLoading: false });
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `Ошибка ${response.status}`);
+      }
+
+      const result = await response.json();
+      set({ user: result.user, isAuthenticated: true, isLoading: false });
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : 'Ошибка регистрации',
-        isLoading: false
+        isLoading: false,
       });
     }
   },
