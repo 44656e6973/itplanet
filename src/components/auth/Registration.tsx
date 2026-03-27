@@ -84,8 +84,8 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
           onClick={() => handleRoleChange('applicant')}
           className={`w-[200px] h-[51px] rounded-[15px] text-[22px] font-normal transition-colors ${
             activeRole === 'applicant'
-              ? 'bg-[#2d2a63] text-[#7881aa]'
-              : 'bg-[#eafffb] text-[#2d2a63]'
+              ? 'bg-[#eafffb] text-[#2d2a63]'
+              : 'bg-[#2d2a63] text-[#7881aa]'
           }`}
         >
           Соискатель
@@ -95,8 +95,8 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
           onClick={() => handleRoleChange('employer')}
           className={`w-[200px] h-[51px] rounded-[15px] text-[22px] font-normal transition-colors ${
             activeRole === 'employer'
-              ? 'bg-[#2d2a63] text-[#7881aa]'
-              : 'bg-[#eafffb] text-[#2d2a63]'
+              ? 'bg-[#eafffb] text-[#2d2a63]'
+              : 'bg-[#2d2a63] text-[#7881aa]'
           }`}
         >
           Работодатель
