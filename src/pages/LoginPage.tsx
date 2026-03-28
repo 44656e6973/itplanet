@@ -8,8 +8,10 @@ export const LoginPage = () => {
 
   const handleSubmit = async (data: { username: string; password: string }) => {
     clearError();
-    await login(data.username, data.password);
-    navigate('/');
+    const isSuccess = await login(data.username, data.password);
+    if (isSuccess) {
+      navigate('/');
+    }
   };
 
   return (

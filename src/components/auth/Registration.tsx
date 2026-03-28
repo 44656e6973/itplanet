@@ -5,6 +5,17 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import type { RegistrationFormProps, Role } from './types';
 
+const PASSWORD_ERROR_TEXT =
+  'Пароль должен быть не короче 12 символов, содержать только латиницу, заглавную букву, цифру и спецсимвол.';
+
+const isPasswordValid = (password: string) => (
+  password.length >= 12
+  && /[A-Z]/.test(password)
+  && /\d/.test(password)
+  && /[^A-Za-z\d]/.test(password)
+  && /^[\x20-\x7E]+$/.test(password)
+);
+
 interface BaseFormData {
   email: string;
   password: string;
@@ -28,6 +39,7 @@ type FormData = ApplicantFormData | EmployerFormData;
 export const Registration = ({ onSubmit, isLoading = false, error }: RegistrationFormProps) => {
   const [activeRole, setActiveRole] = useState<Role>('applicant');
   const [employerStep, setEmployerStep] = useState<1 | 2>(1);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     role: 'applicant',
     email: '',
@@ -39,6 +51,7 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
   const handleRoleChange = (role: Role) => {
     setActiveRole(role);
     setEmployerStep(1);
+    setPasswordError(null);
     if (role === 'employer') {
       setFormData({
         role: 'employer',
@@ -61,6 +74,9 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
+    if (name === 'password') {
+      setPasswordError(null);
+    }
     setFormData((prev) => ({ ...prev, [name]: value } as FormData));
   };
 
@@ -70,6 +86,12 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
       setEmployerStep(2);
       return;
     }
+
+    if (!isPasswordValid(formData.password)) {
+      setPasswordError(PASSWORD_ERROR_TEXT);
+      return;
+    }
+
     onSubmit(formData);
   };
 
@@ -157,9 +179,12 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
               className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
               placeholder="Ввод"
               required
-              minLength={6}
+              minLength={12}
             />
           </div>
+          {passwordError && (
+            <p className="text-sm text-red-300">{passwordError}</p>
+          )}
         </div>
       )}
 
@@ -274,9 +299,12 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
                 className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
                 placeholder="Ввод"
                 required
-                minLength={6}
+                minLength={12}
               />
             </div>
+            {passwordError && (
+              <p className="text-sm text-red-300">{passwordError}</p>
+            )}
           </div>
         </>
       )}

@@ -3,6 +3,53 @@ import type { RegistrationData } from '@/components/auth/types';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
+interface ApiErrorDetail {
+  loc?: Array<string | number>;
+  msg?: string;
+}
+
+interface ApiErrorResponse {
+  error?: {
+    code?: string;
+    message?: string;
+    details?: ApiErrorDetail[];
+  };
+}
+
+const formatValidationError = (details: ApiErrorDetail[] = []) => {
+  const messages = details
+    .map((detail) => {
+      const field = detail.loc?.[detail.loc.length - 1];
+      if (!field || !detail.msg) {
+        return null;
+      }
+
+      return `${String(field)}: ${detail.msg}`;
+    })
+    .filter(Boolean);
+
+  if (messages.length === 0) {
+    return 'Проверьте корректность введённых данных.';
+  }
+
+  return messages.join(', ');
+};
+
+const getApiErrorMessage = async (response: Response) => {
+  const errorData = await response.json().catch(() => ({} as ApiErrorResponse));
+  const apiError = errorData.error;
+
+  if (response.status === 422) {
+    return formatValidationError(apiError?.details);
+  }
+
+  if (response.status === 409) {
+    return apiError?.message || 'Пользователь с такими данными уже существует.';
+  }
+
+  return apiError?.message || `Ошибка ${response.status}`;
+};
+
 export interface User {
   id: string;
   email: string;
@@ -15,8 +62,8 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
 
-  login: (username: string, password: string) => Promise<void>;
-  register: (data: RegistrationData) => Promise<void>;
+  login: (username: string, password: string) => Promise<boolean>;
+  register: (data: RegistrationData) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
 }
@@ -45,17 +92,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Ошибка ${response.status}`);
+        throw new Error(await getApiErrorMessage(response));
       }
 
       const data = await response.json();
       set({ user: data.user, isAuthenticated: true, isLoading: false });
+      return true;
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : 'Ошибка входа',
         isLoading: false,
       });
+      return false;
     }
   },
 
@@ -90,17 +138,18 @@ export const useAuthStore = create<AuthState>((set) => ({
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `Ошибка ${response.status}`);
+        throw new Error(await getApiErrorMessage(response));
       }
 
       const result = await response.json();
       set({ user: result.user, isAuthenticated: true, isLoading: false });
+      return true;
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : 'Ошибка регистрации',
         isLoading: false,
       });
+      return false;
     }
   },
 

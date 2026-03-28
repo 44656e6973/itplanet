@@ -9,8 +9,10 @@ export const RegisterPage = () => {
 
   const handleSubmit = async (data: RegistrationData) => {
     clearError();
-    await register(data);
-    navigate('/');
+    const isSuccess = await register(data);
+    if (isSuccess) {
+      navigate('/');
+    }
   };
 
   return (
