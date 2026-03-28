@@ -7,7 +7,7 @@ import type { LoginFormProps, LoginData } from './types';
 
 export const LoginForm = ({ onSubmit, isLoading = false, error }: LoginFormProps) => {
   const [formData, setFormData] = useState<LoginData>({
-    email: '',
+    username: '',
     password: '',
   });
 
@@ -31,17 +31,17 @@ export const LoginForm = ({ onSubmit, isLoading = false, error }: LoginFormProps
 
       <div className="flex flex-col gap-2">
         <Label
-          htmlFor="email"
+          htmlFor="username"
           className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
         >
-          Email
+          Логин
         </Label>
         <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
           <Input
-            id="email"
-            name="email"
-            type="email"
-            value={formData.email}
+            id="username"
+            name="username"
+            type="text"
+            value={formData.username}
             onChange={handleChange}
             disabled={isLoading}
             className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"

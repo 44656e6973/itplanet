@@ -3,7 +3,7 @@
 export type Role = 'applicant' | 'employer';
 
 export interface LoginData {
-  email: string;
+  username: string;
   password: string;
 }
 

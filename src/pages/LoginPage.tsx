@@ -6,9 +6,9 @@ export const LoginPage = () => {
   const navigate = useNavigate();
   const { login, isLoading, error, clearError } = useAuthStore();
 
-  const handleSubmit = async (data: { email: string; password: string }) => {
+  const handleSubmit = async (data: { username: string; password: string }) => {
     clearError();
-    await login(data.email, data.password);
+    await login(data.username, data.password);
     navigate('/');
   };
 

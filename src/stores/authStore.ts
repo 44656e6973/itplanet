@@ -1,8 +1,7 @@
 import { create } from 'zustand';
 import type { RegistrationData } from '@/components/auth/types';
 
-// URL бэкенда API (замените на ваш)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export interface User {
   id: string;
@@ -16,7 +15,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
 
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<void>;
   register: (data: RegistrationData) => Promise<void>;
   logout: () => void;
   clearError: () => void;
@@ -28,16 +27,21 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
   error: null,
 
-  login: async (email: string, password: string) => {
+  login: async (username: string, password: string) => {
     set({ isLoading: true, error: null });
 
     try {
+      const body = new URLSearchParams({
+        username,
+        password,
+      });
+
       const response = await fetch(`${API_URL}/login`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: JSON.stringify({ email, password }),
+        body,
       });
 
       if (!response.ok) {
