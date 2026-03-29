@@ -89,7 +89,7 @@ export function Map({ className = 'h-full w-full', markers }: MapProps) {
       const [marker] = markers;
       map.easeTo({
         center: [marker.position.lng, marker.position.lat],
-        zoom: 10.5,
+        zoom: 12,
         duration: 700,
       });
       return;
@@ -98,15 +98,35 @@ export function Map({ className = 'h-full w-full', markers }: MapProps) {
     const latitudes = markers.map((marker) => marker.position.lat);
     const longitudes = markers.map((marker) => marker.position.lng);
 
+    const minLat = Math.min(...latitudes);
+    const maxLat = Math.max(...latitudes);
+    const minLng = Math.min(...longitudes);
+    const maxLng = Math.max(...longitudes);
+
+    // Если маркеры в одной точке или очень близко, используем фиксированный зум
+    const latDiff = maxLat - minLat;
+    const lngDiff = maxLng - minLng;
+
+    if (latDiff < 0.01 && lngDiff < 0.01) {
+      const centerLat = (minLat + maxLat) / 2;
+      const centerLng = (minLng + maxLng) / 2;
+      map.easeTo({
+        center: [centerLng, centerLat],
+        zoom: 11,
+        duration: 700,
+      });
+      return;
+    }
+
     map.fitBounds(
       [
-        [Math.min(...longitudes), Math.min(...latitudes)],
-        [Math.max(...longitudes), Math.max(...latitudes)],
+        [minLng, minLat],
+        [maxLng, maxLat],
       ],
       {
         padding: { top: 56, bottom: 56, left: 56, right: 96 },
         duration: 700,
-        maxZoom: 10.8,
+        maxZoom: 11,
       },
     );
   }, [markers]);

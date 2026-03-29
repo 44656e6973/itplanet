@@ -10,13 +10,10 @@ import { Footer } from '../components/common/Footer';
 import { Header } from '../components/common/Header';
 import { Map as OpportunitiesMap } from '../components/map/Map';
 import {
+  fetchMapMarkers,
   fetchOpportunities,
-  getOpportunityCoordinates,
-  getOpportunityLocationKey,
-  getOpportunityLocationLabel,
-  resolveOpportunityCoordinates,
 } from '@/lib/opportunities';
-import type { Coordinates, MapMarker, Opportunity, OpportunityType } from '@/types';
+import type { MapMarker, Opportunity, OpportunityType } from '@/types';
 
 const PAGE_SIZE = 28;
 
@@ -29,14 +26,6 @@ const filterOptions = [
 ] as const;
 
 type FilterOption = (typeof filterOptions)[number]['label'];
-
-interface MarkerGroup {
-  key: string;
-  title: string;
-  description: string;
-  coordinates: Coordinates | null;
-  sampleOpportunity: Opportunity;
-}
 
 const typeLabels: Record<OpportunityType, string> = {
   vacancy: 'Вакансия',
@@ -102,23 +91,7 @@ const FilterIcon = () => (
 const getFilterType = (filter: FilterOption) =>
   filterOptions.find((option) => option.label === filter)?.type ?? null;
 
-const getOpportunitySearchText = (opportunity: Opportunity) =>
-  [
-    opportunity.title,
-    opportunity.company.name,
-    getOpportunityLocationLabel(opportunity),
-    typeLabels[opportunity.type],
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-
 const formatOpportunityDate = (date: string) => dateFormatter.format(new Date(date));
-
-const formatOpportunityLocation = (opportunity: Opportunity) =>
-  getOpportunityLocationLabel(opportunity)
-  || opportunity.company.city
-  || 'Адрес уточняется';
 
 const formatSalary = (opportunity: Opportunity) => {
   const salary = opportunity.salary;
@@ -159,82 +132,6 @@ const formatOpportunityMeta = (opportunity: Opportunity) => {
   return parts.length > 0 ? parts.join(' • ') : 'Формат уточняется';
 };
 
-const pluralizeOpportunities = (count: number) => {
-  const mod10 = count % 10;
-  const mod100 = count % 100;
-
-  if (mod10 === 1 && mod100 !== 11) {
-    return 'возможность';
-  }
-
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
-    return 'возможности';
-  }
-
-  return 'возможностей';
-};
-
-const describeCompanies = (companyNames: string[]) => {
-  if (companyNames.length <= 2) {
-    return companyNames.join(', ');
-  }
-
-  return `${companyNames.slice(0, 2).join(', ')} и ещё ${companyNames.length - 2}`;
-};
-
-const buildMarkerGroups = (
-  opportunities: Opportunity[],
-  resolvedCoordinates: Record<string, Coordinates>,
-) => {
-  const groups = new globalThis.Map<string, MarkerGroup & { companyNames: Set<string>; count: number }>();
-
-  opportunities.forEach((opportunity) => {
-    const key = getOpportunityLocationKey(opportunity);
-    const directCoordinates = getOpportunityCoordinates(opportunity) ?? resolvedCoordinates[key] ?? null;
-    const title = formatOpportunityLocation(opportunity);
-    const existingGroup = groups.get(key);
-
-    if (existingGroup) {
-      existingGroup.count += 1;
-      existingGroup.companyNames.add(opportunity.company.name);
-
-      if (!existingGroup.coordinates && directCoordinates) {
-        existingGroup.coordinates = directCoordinates;
-      }
-
-      return;
-    }
-
-    groups.set(key, {
-      key,
-      title,
-      description: '',
-      coordinates: directCoordinates,
-      sampleOpportunity: opportunity,
-      companyNames: new Set([opportunity.company.name]),
-      count: 1,
-    });
-  });
-
-  return Array.from(groups.values()).map((group) => ({
-    key: group.key,
-    title: group.title,
-    description: `${describeCompanies(Array.from(group.companyNames))} • ${group.count} ${pluralizeOpportunities(group.count)}`,
-    coordinates: group.coordinates,
-    sampleOpportunity: group.sampleOpportunity,
-  }));
-};
-
-const buildMapMarkers = (markerGroups: MarkerGroup[]): MapMarker[] =>
-  markerGroups
-    .filter((group) => group.coordinates)
-    .map((group) => ({
-      id: group.key,
-      position: group.coordinates as Coordinates,
-      title: group.title,
-      description: group.description,
-    }));
-
 const OpportunitySkeleton = ({ index }: { index: number }) => (
   <div
     className="rounded-[14px] bg-[var(--app-card)] px-3 pb-3 pt-2 shadow-[0_0_0_1px_rgba(255,255,255,0.05)]"
@@ -249,22 +146,29 @@ const OpportunitySkeleton = ({ index }: { index: number }) => (
   </div>
 );
 
+const buildMapMarkersFromApi = (markers: import('@/lib/opportunities').MapMarkerData[]): MapMarker[] =>
+  markers.map((marker) => ({
+    id: marker.id,
+    position: { lat: marker.lat, lng: marker.lng },
+    title: `${marker.title} • ${marker.company_name}`,
+    description: marker.city || '',
+  }));
+
 export function MapPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Все');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [detectedCity, setDetectedCity] = useState<string | null>(null);
   const [detectedFromIp, setDetectedFromIp] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [resolvedCoordinates, setResolvedCoordinates] = useState<Record<string, Coordinates>>({});
 
   const requestIdRef = useRef(0);
-  const pendingGeocodeKeysRef = useRef(new Set<string>());
 
   const activeType = getFilterType(activeFilter);
   const normalizedQuery = deferredSearchQuery.trim().toLowerCase();
@@ -274,13 +178,11 @@ export function MapPage() {
   const visibleOpportunities = opportunities.filter((opportunity) => {
     const matchesType = activeType === null || opportunity.type === activeType;
     const matchesQuery = normalizedQuery.length === 0
-      || getOpportunitySearchText(opportunity).includes(normalizedQuery);
+      || opportunity.title.toLowerCase().includes(normalizedQuery)
+      || opportunity.company.name.toLowerCase().includes(normalizedQuery);
 
     return matchesType && matchesQuery;
   });
-
-  const markerGroups = buildMarkerGroups(visibleOpportunities, resolvedCoordinates);
-  const mapMarkers = buildMapMarkers(markerGroups);
 
   const loadPage = async (page: number) => {
     const requestId = ++requestIdRef.current;
@@ -293,26 +195,33 @@ export function MapPage() {
     setDetectedFromIp(false);
     startTransition(() => {
       setOpportunities([]);
+      setMapMarkers([]);
     });
 
     try {
-      const response = await fetchOpportunities({
-        types: activeType ? [activeType] : undefined,
-        limit: PAGE_SIZE,
-        offset,
-      });
+      const [opportunitiesResponse, markersResponse] = await Promise.all([
+        fetchOpportunities({
+          types: activeType ? [activeType] : undefined,
+          limit: PAGE_SIZE,
+          offset,
+        }),
+        fetchMapMarkers({
+          types: activeType ? [activeType] : undefined,
+        }),
+      ]);
 
       if (requestId !== requestIdRef.current) {
         return;
       }
 
-      setTotal(response.total);
+      setTotal(opportunitiesResponse.total);
       setCurrentPage(page);
-      setDetectedCity(response.detected_city);
-      setDetectedFromIp(response.detected_from_ip);
+      setDetectedCity(opportunitiesResponse.detected_city);
+      setDetectedFromIp(opportunitiesResponse.detected_from_ip);
+      setMapMarkers(buildMapMarkersFromApi(markersResponse.markers));
 
       startTransition(() => {
-        setOpportunities(response.items);
+        setOpportunities(opportunitiesResponse.items);
       });
     } catch (loadError) {
       if (requestId !== requestIdRef.current) {
@@ -323,6 +232,7 @@ export function MapPage() {
 
       startTransition(() => {
         setOpportunities([]);
+        setMapMarkers([]);
       });
     } finally {
       if (requestId === requestIdRef.current) {
@@ -336,50 +246,6 @@ export function MapPage() {
   useEffect(() => {
     void loadOpportunitiesRef.current(1);
   }, [activeType]);
-
-  useEffect(() => {
-    let isCancelled = false;
-    const unresolvedGroups = markerGroups.filter((group) => (
-      !group.coordinates && !pendingGeocodeKeysRef.current.has(group.key)
-    ));
-
-    if (unresolvedGroups.length === 0) {
-      return;
-    }
-
-    void (async () => {
-      for (const group of unresolvedGroups) {
-        pendingGeocodeKeysRef.current.add(group.key);
-
-        try {
-          const coordinates = await resolveOpportunityCoordinates(group.sampleOpportunity);
-
-          if (isCancelled) {
-            return;
-          }
-
-          if (coordinates) {
-            setResolvedCoordinates((current) => {
-              if (current[group.key]) {
-                return current;
-              }
-
-              return {
-                ...current,
-                [group.key]: coordinates,
-              };
-            });
-          }
-        } finally {
-          pendingGeocodeKeysRef.current.delete(group.key);
-        }
-      }
-    })();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [markerGroups]);
 
   return (
     <div className="min-h-screen bg-[var(--app-bg)] text-white">
@@ -509,7 +375,7 @@ export function MapPage() {
                       {opportunity.title}
                     </h3>
                     <p className="mt-1 line-clamp-2 text-[11px] leading-[1.2] text-[#8d89d8]">
-                      {formatOpportunityLocation(opportunity)}
+                      {opportunity.company.city || 'Город не указан'}
                     </p>
                     <p className="mt-1 line-clamp-2 text-[11px] leading-[1.2] text-[#8d89d8]">
                       {formatOpportunityMeta(opportunity)}

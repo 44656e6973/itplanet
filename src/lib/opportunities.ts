@@ -7,6 +7,7 @@ import type {
 
 const API_URL = import.meta.env.VITE_API_URL;
 const OPPORTUNITIES_API_URL = `${API_URL}/opportunities`;
+const MAP_API_URL = `${API_URL}/opportunities/map`;
 const NOMINATIM_SEARCH_API_URL = 'https://nominatim.openstreetmap.org/search';
 const MAX_LIMIT = 200;
 
@@ -19,6 +20,27 @@ interface ApiErrorResponse {
 interface NominatimSearchResult {
   lat: string;
   lon: string;
+}
+
+export interface MapMarkerData {
+  id: string;
+  type: 'vacancy' | 'internship' | 'event' | 'mentoring';
+  lat: number;
+  lng: number;
+  title: string;
+  company_name: string;
+  company_logo_url: string | null;
+  salary_min: number | null;
+  salary_max: number | null;
+  work_format: 'office' | 'hybrid' | 'remote' | 'online' | null;
+  city: string | null;
+}
+
+export interface MapMarkersResponse {
+  markers: MapMarkerData[];
+  total: number;
+  detected_city: string | null;
+  detected_from_ip: boolean;
 }
 
 const geocodeCache = new Map<string, Promise<Coordinates | null>>();
@@ -96,6 +118,47 @@ export const fetchOpportunities = async ({
   return response.json() as Promise<OpportunitiesResponse>;
 };
 
+export const fetchMapMarkers = async ({
+  city,
+  types,
+  workFormat,
+  experienceLevel,
+  employmentType,
+  salaryMin,
+  salaryMax,
+}: OpportunitiesQuery = {}) => {
+  const params = new URLSearchParams();
+
+  if (city) {
+    params.set('city', city);
+  }
+
+  appendListParam(params, 'type', types);
+  appendListParam(params, 'work_format', workFormat);
+  appendListParam(params, 'experience_level', experienceLevel);
+  appendListParam(params, 'employment_type', employmentType);
+
+  if (typeof salaryMin === 'number') {
+    params.set('salary_min', String(salaryMin));
+  }
+
+  if (typeof salaryMax === 'number') {
+    params.set('salary_max', String(salaryMax));
+  }
+
+  const response = await fetch(`${MAP_API_URL}?${params.toString()}`, {
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(await getOpportunitiesErrorMessage(response));
+  }
+
+  return response.json() as Promise<MapMarkersResponse>;
+};
+
 export const getOpportunityLocationLabel = (opportunity: Opportunity) =>
   buildLocationLabel(
     opportunity.location.address,
@@ -113,17 +176,42 @@ export const getOpportunityLocationKey = (opportunity: Opportunity) => {
 };
 
 export const getOpportunityCoordinates = (opportunity: Opportunity): Coordinates | null => {
-  if (
-    !isFiniteCoordinate(opportunity.location.lat)
-    || !isFiniteCoordinate(opportunity.location.lng)
-  ) {
-    return null;
+  // Проверяем координаты на верхнем уровне (новый формат API)
+  const directLat = (opportunity as any).lat;
+  const directLng = (opportunity as any).lng;
+  
+  if (isFiniteCoordinate(directLat) && isFiniteCoordinate(directLng)) {
+    return {
+      lat: directLat,
+      lng: directLng,
+    };
   }
 
-  return {
-    lat: opportunity.location.lat,
-    lng: opportunity.location.lng,
-  };
+  // Проверяем координаты в location
+  if (
+    isFiniteCoordinate(opportunity.location.lat)
+    && isFiniteCoordinate(opportunity.location.lng)
+  ) {
+    return {
+      lat: opportunity.location.lat,
+      lng: opportunity.location.lng,
+    };
+  }
+
+  // Парсим координаты из строки адреса (формат: "Москва, координаты: 55.813859, 37.590142")
+  const address = opportunity.location.address;
+  if (address) {
+    const match = address.match(/координаты:\s*([+-]?\d+\.?\d*),\s*([+-]?\d+\.?\d*)/);
+    if (match) {
+      const lat = parseFloat(match[1]);
+      const lng = parseFloat(match[2]);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) {
+        return { lat, lng };
+      }
+    }
+  }
+
+  return null;
 };
 
 export const getOpportunityGeocodeQueries = (opportunity: Opportunity) => {
