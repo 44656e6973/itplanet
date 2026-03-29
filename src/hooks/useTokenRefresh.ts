@@ -31,5 +31,5 @@ export const useTokenRefresh = () => {
     return () => {
       window.clearTimeout(timeoutId);
     };
-  }, [isAuthenticated, refreshToken, tokenRefreshedAt, scheduleRefresh]);
+  }, [isAuthenticated, refreshToken, tokenRefreshedAt]);
 };

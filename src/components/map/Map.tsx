@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { StyleSpecification } from 'maplibre-gl';
 import MapGL, { Marker, type MapRef } from 'react-map-gl/maplibre';
 import type { MapMarker } from '../../types';
@@ -78,6 +78,39 @@ interface MapProps {
 export function Map({ className = 'h-full w-full', markers }: MapProps) {
   const mapRef = useRef<MapRef | null>(null);
 
+  useEffect(() => {
+    const map = mapRef.current;
+
+    if (!map || markers.length === 0) {
+      return;
+    }
+
+    if (markers.length === 1) {
+      const [marker] = markers;
+      map.easeTo({
+        center: [marker.position.lng, marker.position.lat],
+        zoom: 10.5,
+        duration: 700,
+      });
+      return;
+    }
+
+    const latitudes = markers.map((marker) => marker.position.lat);
+    const longitudes = markers.map((marker) => marker.position.lng);
+
+    map.fitBounds(
+      [
+        [Math.min(...longitudes), Math.min(...latitudes)],
+        [Math.max(...longitudes), Math.max(...latitudes)],
+      ],
+      {
+        padding: { top: 56, bottom: 56, left: 56, right: 96 },
+        duration: 700,
+        maxZoom: 10.8,
+      },
+    );
+  }, [markers]);
+
   return (
     <div className={`relative overflow-hidden ${className}`}>
       <MapGL
@@ -98,7 +131,10 @@ export function Map({ className = 'h-full w-full', markers }: MapProps) {
             latitude={marker.position.lat}
             anchor="bottom"
           >
-            <div title={marker.title} className="drop-shadow-[0_4px_5px_rgba(75,66,158,0.15)]">
+            <div
+              title={marker.description ? `${marker.title} • ${marker.description}` : marker.title}
+              className="drop-shadow-[0_4px_5px_rgba(75,66,158,0.15)]"
+            >
               <PinIcon />
             </div>
           </Marker>
