@@ -18,6 +18,10 @@ export interface BaseRegistrationData {
   password: string;
 }
 
+export interface RegistrationSubmitMeta {
+  confirmPassword: string;
+}
+
 export interface EmployerRegistrationData extends BaseRegistrationData {
   role: 'employer';
   companyName: string;
@@ -32,9 +36,10 @@ export interface ApplicantRegistrationData extends BaseRegistrationData {
 }
 
 export type RegistrationData = EmployerRegistrationData | ApplicantRegistrationData;
+export type RegistrationSubmitData = RegistrationData & RegistrationSubmitMeta;
 
 export interface RegistrationFormProps {
-  onSubmit: (data: RegistrationData) => Promise<void> | void;
+  onSubmit: (data: RegistrationSubmitData) => Promise<void> | void;
   isLoading?: boolean;
   error?: string | null;
 }

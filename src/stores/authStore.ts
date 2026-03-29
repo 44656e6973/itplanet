@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { RegistrationData } from '@/components/auth/types';
+import type { RegistrationSubmitData } from '@/components/auth/types';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -63,7 +63,7 @@ interface AuthState {
   error: string | null;
 
   login: (username: string, password: string) => Promise<boolean>;
-  register: (data: RegistrationData) => Promise<boolean>;
+  register: (data: RegistrationSubmitData) => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
 }
@@ -107,7 +107,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  register: async (data: RegistrationData) => {
+  register: async (data: RegistrationSubmitData) => {
     set({ isLoading: true, error: null });
 
     try {
@@ -116,6 +116,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         ? {
             email: data.email,
             password: data.password,
+            confirm_password: data.confirmPassword,
             role: data.role,
             first_name: (data as any).firstName || '',
             last_name: (data as any).lastName || '',
@@ -123,6 +124,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         : {
             email: data.email,
             password: data.password,
+            confirm_password: data.confirmPassword,
             role: data.role,
             company_name: (data as any).companyName || '',
             inn: (data as any).inn || '',

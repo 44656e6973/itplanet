@@ -1,13 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 import { Registration } from '@/components/auth';
 import { useAuthStore } from '@/stores/authStore';
-import type { RegistrationData } from '@/components/auth/types';
+import type { RegistrationSubmitData } from '@/components/auth/types';
 
 export const RegisterPage = () => {
   const navigate = useNavigate();
   const { register, isLoading, error, clearError } = useAuthStore();
 
-  const handleSubmit = async (data: RegistrationData) => {
+  const handleSubmit = async (data: RegistrationSubmitData) => {
     clearError();
     const isSuccess = await register(data);
     if (isSuccess) {

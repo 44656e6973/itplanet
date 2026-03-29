@@ -3,10 +3,11 @@ import type { FormEvent, ChangeEvent } from 'react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
-import type { RegistrationFormProps, Role } from './types';
+import type { RegistrationFormProps, RegistrationSubmitData, Role } from './types';
 
 const PASSWORD_ERROR_TEXT =
   'Пароль должен быть не короче 12 символов, содержать только латиницу, заглавную букву, цифру и спецсимвол.';
+const PASSWORD_MISMATCH_ERROR_TEXT = 'Пароли не совпадают.';
 
 const isPasswordValid = (password: string) => (
   password.length >= 12
@@ -40,6 +41,8 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
   const [activeRole, setActiveRole] = useState<Role>('applicant');
   const [employerStep, setEmployerStep] = useState<1 | 2>(1);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordReply, setPasswordReply] = useState('');
+  const [passwordReplyError, setPasswordReplyError] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>({
     role: 'applicant',
     email: '',
@@ -52,6 +55,8 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
     setActiveRole(role);
     setEmployerStep(1);
     setPasswordError(null);
+    setPasswordReply('');
+    setPasswordReplyError(null);
     if (role === 'employer') {
       setFormData({
         role: 'employer',
@@ -76,8 +81,14 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
     const { name, value } = e.target;
     if (name === 'password') {
       setPasswordError(null);
+      setPasswordReplyError(null);
     }
     setFormData((prev) => ({ ...prev, [name]: value } as FormData));
+  };
+
+  const handlePasswordReplyChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setPasswordReply(e.target.value);
+    setPasswordReplyError(null);
   };
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -92,7 +103,15 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
       return;
     }
 
-    onSubmit(formData);
+    if (formData.password !== passwordReply) {
+      setPasswordReplyError(PASSWORD_MISMATCH_ERROR_TEXT);
+      return;
+    }
+
+    onSubmit({
+      ...formData,
+      confirmPassword: passwordReply,
+    } satisfies RegistrationSubmitData);
   };
 
   const isEmployerFirstStep = activeRole === 'employer' && employerStep === 1;
@@ -161,31 +180,59 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
 
       {/* Password field */}
       {showPasswordField && (
-        <div className="flex flex-col gap-2">
-          <Label
-            htmlFor="password"
-            className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
-          >
-            Пароль
-          </Label>
-          <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleChange}
-              disabled={isLoading}
-              className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
-              placeholder="Ввод"
-              required
-              minLength={12}
-            />
+        <>
+          <div className="flex flex-col gap-2">
+            <Label
+              htmlFor="password"
+              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
+            >
+              Пароль
+            </Label>
+            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                disabled={isLoading}
+                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
+                placeholder="Ввод"
+                required
+                minLength={12}
+              />
+            </div>
+            {passwordError && (
+              <p className="text-sm text-red-300">{passwordError}</p>
+            )}
           </div>
-          {passwordError && (
-            <p className="text-sm text-red-300">{passwordError}</p>
-          )}
-        </div>
+
+          <div className="flex flex-col gap-2">
+            <Label
+              htmlFor="passwordReply"
+              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
+            >
+              Повторите пароль
+            </Label>
+            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
+              <Input
+                id="passwordReply"
+                name="passwordReply"
+                type="password"
+                value={passwordReply}
+                onChange={handlePasswordReplyChange}
+                disabled={isLoading}
+                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
+                placeholder="Ввод"
+                required
+                minLength={12}
+              />
+            </div>
+            {passwordReplyError && (
+              <p className="text-sm text-red-300">{passwordReplyError}</p>
+            )}
+          </div>
+        </>
       )}
 
       {/* Applicant fields */}
@@ -304,6 +351,32 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
             </div>
             {passwordError && (
               <p className="text-sm text-red-300">{passwordError}</p>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label
+              htmlFor="passwordReply"
+              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
+            >
+              Повторите пароль
+            </Label>
+            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
+              <Input
+                id="passwordReply"
+                name="passwordReply"
+                type="password"
+                value={passwordReply}
+                onChange={handlePasswordReplyChange}
+                disabled={isLoading}
+                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
+                placeholder="Ввод"
+                required
+                minLength={12}
+              />
+            </div>
+            {passwordReplyError && (
+              <p className="text-sm text-red-300">{passwordReplyError}</p>
             )}
           </div>
         </>
