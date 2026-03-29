@@ -1,8 +1,10 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import type { RegistrationSubmitData } from '@/components/auth/types';
 
 const API_URL = import.meta.env.VITE_API_URL;
 const COMPANIES_API_URL = `${API_URL}/companies`;
+const AUTH_STORAGE_KEY = 'auth-storage';
 
 interface ApiErrorDetail {
   loc?: Array<string | number>;
@@ -73,113 +75,194 @@ export interface User {
   role: 'employer' | 'applicant';
 }
 
+interface AuthResponse {
+  user?: User;
+  access_token?: string;
+  refresh_token?: string;
+}
+
+const getAuthData = (response: AuthResponse, fallbackUser: User | null = null) => {
+  if (!response.access_token || !response.refresh_token) {
+    throw new Error('Сервер не вернул токены авторизации.');
+  }
+
+  return {
+    user: response.user ?? fallbackUser,
+    accessToken: response.access_token,
+    refreshToken: response.refresh_token,
+    tokenRefreshedAt: Date.now(),
+    isAuthenticated: true,
+    isLoading: false,
+    error: null,
+  };
+};
+
+const getLoggedOutState = () => ({
+  user: null,
+  accessToken: null,
+  refreshToken: null,
+  tokenRefreshedAt: null,
+  isAuthenticated: false,
+  isLoading: false,
+  error: null,
+});
+
 interface AuthState {
   user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  tokenRefreshedAt: number | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
 
   login: (username: string, password: string) => Promise<boolean>;
   register: (data: RegistrationSubmitData) => Promise<boolean>;
+  refreshTokens: () => Promise<boolean>;
   logout: () => void;
   clearError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  isAuthenticated: false,
-  isLoading: false,
-  error: null,
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      ...getLoggedOutState(),
 
-  login: async (username: string, password: string) => {
-    set({ isLoading: true, error: null });
+      login: async (username: string, password: string) => {
+        set({ isLoading: true, error: null });
 
-    try {
-      const body = new URLSearchParams({
-        username,
-        password,
-      });
+        try {
+          const body = new URLSearchParams({
+            username,
+            password,
+          });
 
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body,
-      });
+          const response = await fetch(`${API_URL}/auth/login`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body,
+          });
 
-      if (!response.ok) {
-        throw new Error(await getApiErrorMessage(response));
-      }
+          if (!response.ok) {
+            throw new Error(await getApiErrorMessage(response));
+          }
 
-      const data = await response.json();
-      set({ user: data.user, isAuthenticated: true, isLoading: false });
-      return true;
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : 'Ошибка входа',
-        isLoading: false,
-      });
-      return false;
-    }
-  },
-
-  register: async (data: RegistrationSubmitData) => {
-    set({ isLoading: true, error: null });
-
-    try {
-      if (data.role === 'employer') {
-        const verifyInnResponse = await fetch(`${COMPANIES_API_URL}/verify-inn`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ inn: data.inn }),
-        });
-
-        if (!verifyInnResponse.ok) {
-          throw new Error(await getInnVerificationErrorMessage(verifyInnResponse));
+          const data = (await response.json()) as AuthResponse;
+          set(getAuthData(data));
+          return true;
+        } catch (err) {
+          set({
+            error: err instanceof Error ? err.message : 'Ошибка входа',
+            isLoading: false,
+          });
+          return false;
         }
-      }
+      },
 
-      const payload = {
-        email: data.email,
-        password: data.password,
-        confirm_password: data.confirmPassword,
-        role: data.role,
-        first_name: data.firstName,
-        last_name: data.lastName,
-      };
+      register: async (data: RegistrationSubmitData) => {
+        set({ isLoading: true, error: null });
 
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
+        try {
+          if (data.role === 'employer') {
+            const verifyInnResponse = await fetch(`${COMPANIES_API_URL}/verify-inn`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ inn: data.inn }),
+            });
 
-      if (!response.ok) {
-        throw new Error(await getApiErrorMessage(response));
-      }
+            if (!verifyInnResponse.ok) {
+              throw new Error(await getInnVerificationErrorMessage(verifyInnResponse));
+            }
+          }
 
-      const result = await response.json();
-      set({ user: result.user, isAuthenticated: true, isLoading: false });
-      return true;
-    } catch (err) {
-      set({
-        error: err instanceof Error ? err.message : 'Ошибка регистрации',
-        isLoading: false,
-      });
-      return false;
+          const payload = {
+            email: data.email,
+            password: data.password,
+            confirm_password: data.confirmPassword,
+            role: data.role,
+            first_name: data.firstName,
+            last_name: data.lastName,
+          };
+
+          const response = await fetch(`${API_URL}/auth/register`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            throw new Error(await getApiErrorMessage(response));
+          }
+
+          const result = (await response.json()) as AuthResponse;
+          set(getAuthData(result));
+          return true;
+        } catch (err) {
+          set({
+            error: err instanceof Error ? err.message : 'Ошибка регистрации',
+            isLoading: false,
+          });
+          return false;
+        }
+      },
+
+      refreshTokens: async () => {
+        const { refreshToken, user } = get();
+
+        if (!refreshToken) {
+          set(getLoggedOutState());
+          return false;
+        }
+
+        try {
+          const response = await fetch(`${API_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refresh_token: refreshToken }),
+          });
+
+          if (!response.ok) {
+            throw new Error(await getApiErrorMessage(response));
+          }
+
+          const data = (await response.json()) as AuthResponse;
+          set(getAuthData(data, user));
+          return true;
+        } catch {
+          set(getLoggedOutState());
+          return false;
+        }
+      },
+
+      logout: () => {
+        set(getLoggedOutState());
+      },
+
+      clearError: () => {
+        set({ error: null });
+      },
+    }),
+    {
+      name: AUTH_STORAGE_KEY,
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        user: state.user,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
+        tokenRefreshedAt: state.tokenRefreshedAt,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
-  },
+  )
+);
 
-  logout: () => {
-    set({ user: null, isAuthenticated: false, error: null });
-  },
-
-  clearError: () => {
-    set({ error: null });
-  },
-}));
+export const getAccessToken = () => useAuthStore.getState().accessToken;
+export const getRefreshToken = () => useAuthStore.getState().refreshToken;
