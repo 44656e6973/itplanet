@@ -21,9 +21,9 @@ const mapMarkers: MapMarker[] = [
   { id: 'north-west', position: { lat: 60.8, lng: 31.5 }, title: 'Северо-запад' },
   { id: 'west', position: { lat: 56.1, lng: 40.9 }, title: 'Западный кластер' },
   { id: 'center', position: { lat: 57.4, lng: 60.2 }, title: 'Центр' },
-  { id: 'south', position: { lat: 47.5, lng: 35.2 }, title: 'Юг' },
+  { id: 'south', position: { lat: 47.2, lng: 39.7 }, title: 'Юг' },
   { id: 'mid-east', position: { lat: 50.7, lng: 54.8 }, title: 'Средний восток' },
-  { id: 'south-east', position: { lat: 49.2, lng: 79.9 }, title: 'Юго-восток' },
+  { id: 'south-east', position: { lat: 53.3, lng: 83.8 }, title: 'Юго-восток' },
   { id: 'far-east', position: { lat: 60.5, lng: 97.3 }, title: 'Дальний восток' },
 ];
 

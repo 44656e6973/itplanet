@@ -5,22 +5,27 @@ import type { MapMarker } from '../../types';
 
 const MAP_STYLE: StyleSpecification = {
   version: 8,
-  sources: {},
+  sources: {
+    osm: {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '&copy; OpenStreetMap contributors',
+    },
+  },
   layers: [
     {
-      id: 'background',
-      type: 'background',
-      paint: {
-        'background-color': '#ECFFFD',
-      },
+      id: 'osm-tiles',
+      type: 'raster',
+      source: 'osm',
     },
   ],
 };
 
 const DEFAULT_VIEW_STATE = {
-  longitude: 60,
-  latitude: 55,
-  zoom: 3.05,
+  longitude: 90,
+  latitude: 61,
+  zoom: 3.4,
 };
 
 const PinIcon = () => (
@@ -79,10 +84,10 @@ export function Map({ className = 'h-full w-full', markers }: MapProps) {
         ref={mapRef}
         initialViewState={DEFAULT_VIEW_STATE}
         minZoom={2.2}
-        maxZoom={6.2}
+        maxZoom={12}
         dragRotate={false}
         touchZoomRotate={false}
-        attributionControl={false}
+        attributionControl={{ compact: true }}
         mapStyle={MAP_STYLE}
         style={{ width: '100%', height: '100%' }}
       >
