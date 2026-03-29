@@ -4,35 +4,35 @@ import { describe, it, expect, vi } from 'vitest';
 vi.mock('../../tailwind.css', () => ({}));
 
 describe('Footer', () => {
-  it('рендерит название компании', async () => {
+  it('рендерит секцию контактов', async () => {
     const { render, screen } = await import('@testing-library/react');
     const { Footer } = await import('./Footer');
-    
+
     render(<Footer />);
-    expect(screen.getByText('IT Planet')).toBeInTheDocument();
+    expect(screen.getByText('Контакты:')).toBeInTheDocument();
   });
 
-  it('рендерит копирайт', async () => {
+  it('рендерит секцию о нас', async () => {
     const { render, screen } = await import('@testing-library/react');
     const { Footer } = await import('./Footer');
-    
+
     render(<Footer />);
-    expect(screen.getByText(/© 2026 IT Planet\. All rights reserved\./i)).toBeInTheDocument();
+    expect(screen.getByText('О нас:')).toBeInTheDocument();
   });
 
-  it('рендерит секцию Resources', async () => {
+  it('рендерит ссылку на политику конфиденциальности', async () => {
     const { render, screen } = await import('@testing-library/react');
     const { Footer } = await import('./Footer');
-    
+
     render(<Footer />);
-    expect(screen.getByText('Resources')).toBeInTheDocument();
+    expect(screen.getByText('Политика конфиденциальности')).toBeInTheDocument();
   });
 
-  it('рендерит секцию Follow', async () => {
+  it('рендерит подпись социальных ссылок', async () => {
     const { render, screen } = await import('@testing-library/react');
     const { Footer } = await import('./Footer');
-    
+
     render(<Footer />);
-    expect(screen.getByText('Follow')).toBeInTheDocument();
+    expect(screen.getByText('Ищите нас здесь')).toBeInTheDocument();
   });
 });
