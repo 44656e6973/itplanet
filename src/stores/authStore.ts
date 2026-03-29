@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { RegistrationSubmitData } from '@/components/auth/types';
 
 const API_URL = import.meta.env.VITE_API_URL;
+const COMPANIES_API_URL = `${API_URL}/companies`;
 
 interface ApiErrorDetail {
   loc?: Array<string | number>;
@@ -50,6 +51,22 @@ const getApiErrorMessage = async (response: Response) => {
   return apiError?.message || `Ошибка ${response.status}`;
 };
 
+const getInnVerificationErrorMessage = async (response: Response) => {
+  if (response.status === 404) {
+    return 'ИНН не найден.';
+  }
+
+  if (response.status === 422) {
+    return 'Компания ликвидирована или находится в процедуре банкротства.';
+  }
+
+  if (response.status === 502) {
+    return 'Сервис проверки ИНН недоступен.';
+  }
+
+  return getApiErrorMessage(response);
+};
+
 export interface User {
   id: string;
   email: string;
@@ -83,7 +100,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         password,
       });
 
-      const response = await fetch(`${API_URL}/login`, {
+      const response = await fetch(`${API_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -111,27 +128,30 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
 
     try {
-      // Преобразуем данные в формат бэкенда
-      const payload = data.role === 'applicant'
-        ? {
-            email: data.email,
-            password: data.password,
-            confirm_password: data.confirmPassword,
-            role: data.role,
-            first_name: (data as any).firstName || '',
-            last_name: (data as any).lastName || '',
-          }
-        : {
-            email: data.email,
-            password: data.password,
-            confirm_password: data.confirmPassword,
-            role: data.role,
-            company_name: (data as any).companyName || '',
-            inn: (data as any).inn || '',
-            phone: data.phone,
-          };
+      if (data.role === 'employer') {
+        const verifyInnResponse = await fetch(`${COMPANIES_API_URL}/verify-inn`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ inn: data.inn }),
+        });
 
-      const response = await fetch(`${API_URL}/register`, {
+        if (!verifyInnResponse.ok) {
+          throw new Error(await getInnVerificationErrorMessage(verifyInnResponse));
+        }
+      }
+
+      const payload = {
+        email: data.email,
+        password: data.password,
+        confirm_password: data.confirmPassword,
+        role: data.role,
+        first_name: data.firstName,
+        last_name: data.lastName,
+      };
+
+      const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

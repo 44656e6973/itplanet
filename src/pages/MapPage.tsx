@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Header } from '../components/common/Header';
 import { Footer } from '../components/common/Footer';
 import { Map } from '../components/map/Map';
@@ -99,10 +99,6 @@ export function MapPage() {
     currentPage * PAGE_SIZE,
   );
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, activeFilter]);
-
   return (
     <div className="min-h-screen bg-[var(--app-bg)] text-white">
       <Header />
@@ -121,7 +117,10 @@ export function MapPage() {
               <input
                 type="search"
                 value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setCurrentPage(1);
+                }}
                 placeholder="Поиск"
                 className="h-8 w-full rounded-[12px] border-none bg-[var(--app-mint)] px-4 pr-10 text-[15px] text-[#6d69c2] outline-none placeholder:text-[#9da3e4]"
               />
@@ -148,6 +147,7 @@ export function MapPage() {
                       type="button"
                       onClick={() => {
                         setActiveFilter(option);
+                        setCurrentPage(1);
                         setIsFilterOpen(false);
                       }}
                       className={`w-full rounded-[10px] px-3 py-2 text-left text-[14px] transition-colors ${

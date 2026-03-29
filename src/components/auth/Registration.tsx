@@ -30,9 +30,9 @@ interface ApplicantFormData extends BaseFormData {
 
 interface EmployerFormData extends BaseFormData {
   role: 'employer';
-  companyName: string;
+  firstName: string;
+  lastName: string;
   inn: string;
-  phone: string;
 }
 
 type FormData = ApplicantFormData | EmployerFormData;
@@ -62,9 +62,9 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
         role: 'employer',
         email: '',
         password: '',
-        companyName: '',
+        firstName: '',
+        lastName: '',
         inn: '',
-        phone: '',
       });
     } else {
       setFormData({
@@ -117,7 +117,8 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
   const isEmployerFirstStep = activeRole === 'employer' && employerStep === 1;
   const isEmployerSecondStep = activeRole === 'employer' && employerStep === 2;
   const showEmailField = activeRole === 'applicant' || isEmployerSecondStep;
-  const showPasswordField = activeRole === 'applicant';
+  const showPasswordField = activeRole === 'applicant' || isEmployerFirstStep;
+  const showProfileFields = activeRole === 'applicant' || isEmployerFirstStep;
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -168,6 +169,77 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
               name="email"
               type="email"
               value={formData.email}
+              onChange={handleChange}
+              disabled={isLoading}
+              className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
+              placeholder="Ввод"
+              required
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Profile fields */}
+      {showProfileFields && (
+        <>
+          <div className="flex flex-col gap-2">
+            <Label
+              htmlFor="lastName"
+              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
+            >
+              Фамилия
+            </Label>
+            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
+              <Input
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                disabled={isLoading}
+                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
+                placeholder="Ввод"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <Label
+              htmlFor="firstName"
+              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
+            >
+              Имя
+            </Label>
+            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
+              <Input
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                disabled={isLoading}
+                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
+                placeholder="Ввод"
+                required
+              />
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Employer fields */}
+      {isEmployerSecondStep && (
+        <div className="flex flex-col gap-2">
+          <Label
+            htmlFor="inn"
+            className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
+          >
+            ИНН
+          </Label>
+          <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
+            <Input
+              id="inn"
+              name="inn"
+              value={(formData as EmployerFormData).inn}
               onChange={handleChange}
               disabled={isLoading}
               className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
@@ -233,176 +305,6 @@ export const Registration = ({ onSubmit, isLoading = false, error }: Registratio
             )}
           </div>
         </>
-      )}
-
-      {/* Applicant fields */}
-      {activeRole === 'applicant' && (
-        <>
-          <div className="flex flex-col gap-2">
-            <Label
-              htmlFor="lastName"
-              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
-            >
-              Фамилия
-            </Label>
-            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
-              <Input
-                id="lastName"
-                name="lastName"
-                value={(formData as ApplicantFormData).lastName}
-                onChange={handleChange}
-                disabled={isLoading}
-                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
-                placeholder="Ввод"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label
-              htmlFor="firstName"
-              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
-            >
-              Имя
-            </Label>
-            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
-              <Input
-                id="firstName"
-                name="firstName"
-                value={(formData as ApplicantFormData).firstName}
-                onChange={handleChange}
-                disabled={isLoading}
-                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
-                placeholder="Ввод"
-                required
-              />
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* Employer fields */}
-      {isEmployerFirstStep && (
-        <>
-          <div className="flex flex-col gap-2">
-            <Label
-              htmlFor="phone"
-              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
-            >
-              Логин
-            </Label>
-            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
-              <Input
-                id="phone"
-                name="phone"
-                type="text"
-                value={(formData as EmployerFormData).phone}
-                onChange={handleChange}
-                disabled={isLoading}
-                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
-                placeholder="Ввод"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label
-              htmlFor="companyName"
-              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
-            >
-              Имя пользователя
-            </Label>
-            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
-              <Input
-                id="companyName"
-                name="companyName"
-                value={(formData as EmployerFormData).companyName}
-                onChange={handleChange}
-                disabled={isLoading}
-                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
-                placeholder="Ввод"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label
-              htmlFor="password"
-              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
-            >
-              Пароль
-            </Label>
-            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
-              <Input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                disabled={isLoading}
-                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
-                placeholder="Ввод"
-                required
-                minLength={12}
-              />
-            </div>
-            {passwordError && (
-              <p className="text-sm text-red-300">{passwordError}</p>
-            )}
-          </div>
-
-          <div className="flex flex-col gap-2">
-            <Label
-              htmlFor="passwordReply"
-              className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
-            >
-              Повторите пароль
-            </Label>
-            <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
-              <Input
-                id="passwordReply"
-                name="passwordReply"
-                type="password"
-                value={passwordReply}
-                onChange={handlePasswordReplyChange}
-                disabled={isLoading}
-                className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
-                placeholder="Ввод"
-                required
-                minLength={12}
-              />
-            </div>
-            {passwordReplyError && (
-              <p className="text-sm text-red-300">{passwordReplyError}</p>
-            )}
-          </div>
-        </>
-      )}
-
-      {isEmployerSecondStep && (
-        <div className="flex flex-col gap-2">
-          <Label
-            htmlFor="inn"
-            className="text-[#eafffb] text-[22px] font-normal tracking-[0] leading-[normal]"
-          >
-            ИНН
-          </Label>
-          <div className="w-[415px] h-[51px] bg-[#eafffb] rounded-[15px] flex items-center px-[14px]">
-            <Input
-              id="inn"
-              name="inn"
-              value={(formData as EmployerFormData).inn}
-              onChange={handleChange}
-              disabled={isLoading}
-              className="bg-transparent border-none shadow-none text-[#8989c9] text-xl font-normal placeholder:text-[#8989c9] focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-auto w-full"
-              placeholder="Ввод"
-              required
-            />
-          </div>
-        </div>
       )}
 
       {isEmployerFirstStep ? (

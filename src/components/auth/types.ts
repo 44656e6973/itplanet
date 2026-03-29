@@ -16,6 +16,8 @@ export interface LoginFormProps {
 export interface BaseRegistrationData {
   email: string;
   password: string;
+  firstName: string;
+  lastName: string;
 }
 
 export interface RegistrationSubmitMeta {
@@ -24,15 +26,11 @@ export interface RegistrationSubmitMeta {
 
 export interface EmployerRegistrationData extends BaseRegistrationData {
   role: 'employer';
-  companyName: string;
   inn: string;
-  phone: string;
 }
 
 export interface ApplicantRegistrationData extends BaseRegistrationData {
   role: 'applicant';
-  firstName: string;
-  lastName: string;
 }
 
 export type RegistrationData = EmployerRegistrationData | ApplicantRegistrationData;
