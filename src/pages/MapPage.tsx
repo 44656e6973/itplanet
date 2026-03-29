@@ -160,7 +160,7 @@ export function MapPage() {
   const [activeFilter, setActiveFilter] = useState<FilterOption>('Все');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
-  const [mapMarkers, setMapMarkers] = useState<MapMarker[]>([]);
+  const [allMapMarkers, setAllMapMarkers] = useState<MapMarker[]>([]);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
   const [detectedCity, setDetectedCity] = useState<string | null>(null);
@@ -184,6 +184,10 @@ export function MapPage() {
     return matchesType && matchesQuery;
   });
 
+  // Фильтруем маркеры по ID вакансий текущей страницы
+  const currentOpportunityIds = new Set(visibleOpportunities.map(o => o.id));
+  const mapMarkers = allMapMarkers.filter(m => currentOpportunityIds.has(m.id));
+
   const loadPage = async (page: number) => {
     const requestId = ++requestIdRef.current;
     const offset = (page - 1) * PAGE_SIZE;
@@ -195,7 +199,6 @@ export function MapPage() {
     setDetectedFromIp(false);
     startTransition(() => {
       setOpportunities([]);
-      setMapMarkers([]);
     });
 
     try {
@@ -205,8 +208,11 @@ export function MapPage() {
           limit: PAGE_SIZE,
           offset,
         }),
+        // Загружаем все маркеры для текущего фильтра
         fetchMapMarkers({
           types: activeType ? [activeType] : undefined,
+          limit: 1000,
+          offset: 0,
         }),
       ]);
 
@@ -218,7 +224,7 @@ export function MapPage() {
       setCurrentPage(page);
       setDetectedCity(opportunitiesResponse.detected_city);
       setDetectedFromIp(opportunitiesResponse.detected_from_ip);
-      setMapMarkers(buildMapMarkersFromApi(markersResponse.markers));
+      setAllMapMarkers(buildMapMarkersFromApi(markersResponse.markers));
 
       startTransition(() => {
         setOpportunities(opportunitiesResponse.items);
@@ -232,7 +238,7 @@ export function MapPage() {
 
       startTransition(() => {
         setOpportunities([]);
-        setMapMarkers([]);
+        setAllMapMarkers([]);
       });
     } finally {
       if (requestId === requestIdRef.current) {

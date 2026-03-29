@@ -126,6 +126,8 @@ export const fetchMapMarkers = async ({
   employmentType,
   salaryMin,
   salaryMax,
+  limit = 50,
+  offset = 0,
 }: OpportunitiesQuery = {}) => {
   const params = new URLSearchParams();
 
@@ -145,6 +147,9 @@ export const fetchMapMarkers = async ({
   if (typeof salaryMax === 'number') {
     params.set('salary_max', String(salaryMax));
   }
+
+  params.set('limit', String(Math.min(Math.max(limit, 1), MAX_LIMIT)));
+  params.set('offset', String(Math.max(offset, 0)));
 
   const response = await fetch(`${MAP_API_URL}?${params.toString()}`, {
     headers: {
