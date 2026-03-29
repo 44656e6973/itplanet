@@ -1,8 +1,7 @@
 import { create } from 'zustand';
+import type { User as ApiUser, UserRole } from '@/types/api';
+import { authApi, usersApi } from '@/api/apiClient';
 import type { RegistrationSubmitData } from '@/components/auth/types';
-
-const API_URL = import.meta.env.VITE_API_URL;
-const COMPANIES_API_URL = `${API_URL}/companies`;
 
 interface ApiErrorDetail {
   loc?: Array<string | number>;
@@ -67,10 +66,8 @@ const getInnVerificationErrorMessage = async (response: Response) => {
   return getApiErrorMessage(response);
 };
 
-export interface User {
-  id: string;
-  email: string;
-  role: 'employer' | 'applicant';
+export interface User extends ApiUser {
+  role: UserRole;
 }
 
 interface AuthState {
@@ -81,9 +78,24 @@ interface AuthState {
 
   login: (username: string, password: string) => Promise<boolean>;
   register: (data: RegistrationSubmitData) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
   clearError: () => void;
+  fetchCurrentUser: () => Promise<void>;
 }
+
+// Token management
+const setTokens = (accessToken: string, refreshToken: string) => {
+  localStorage.setItem('access_token', accessToken);
+  localStorage.setItem('refresh_token', refreshToken);
+};
+
+const getAccessToken = () => localStorage.getItem('access_token');
+const getRefreshToken = () => localStorage.getItem('refresh_token');
+
+const clearTokens = () => {
+  localStorage.removeItem('access_token');
+  localStorage.removeItem('refresh_token');
+};
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
@@ -91,28 +103,28 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
   error: null,
 
+  fetchCurrentUser: async () => {
+    const token = getAccessToken();
+    if (!token) {
+      set({ user: null, isAuthenticated: false });
+      return;
+    }
+
+    try {
+      const userData = await usersApi.me() as User;
+      set({ user: userData, isAuthenticated: true });
+    } catch {
+      clearTokens();
+      set({ user: null, isAuthenticated: false });
+    }
+  },
+
   login: async (username: string, password: string) => {
     set({ isLoading: true, error: null });
 
     try {
-      const body = new URLSearchParams({
-        username,
-        password,
-      });
-
-      const response = await fetch(`${API_URL}/auth/login`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body,
-      });
-
-      if (!response.ok) {
-        throw new Error(await getApiErrorMessage(response));
-      }
-
-      const data = await response.json();
+      const data = await authApi.login(username, password) as { user: User; access_token: string; refresh_token: string };
+      setTokens(data.access_token, data.refresh_token);
       set({ user: data.user, isAuthenticated: true, isLoading: false });
       return true;
     } catch (err) {
@@ -128,8 +140,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
 
     try {
+      const API_URL = import.meta.env.VITE_API_URL;
+      
       if (data.role === 'employer') {
-        const verifyInnResponse = await fetch(`${COMPANIES_API_URL}/verify-inn`, {
+        const verifyInnResponse = await fetch(`${API_URL}/companies/verify-inn`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -145,25 +159,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       const payload = {
         email: data.email,
         password: data.password,
-        confirm_password: data.confirmPassword,
-        role: data.role,
         first_name: data.firstName,
         last_name: data.lastName,
+        role: data.role,
       };
 
-      const response = await fetch(`${API_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error(await getApiErrorMessage(response));
-      }
-
-      const result = await response.json();
+      const result = await authApi.register(payload) as { user: User; access_token: string; refresh_token: string };
+      setTokens(result.access_token, result.refresh_token);
       set({ user: result.user, isAuthenticated: true, isLoading: false });
       return true;
     } catch (err) {
@@ -175,11 +177,45 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  logout: () => {
-    set({ user: null, isAuthenticated: false, error: null });
+  logout: async () => {
+    try {
+      const accessToken = getAccessToken();
+      const refreshToken = getRefreshToken();
+      
+      if (accessToken && refreshToken) {
+        await authApi.logout();
+      }
+    } catch {
+      // Ignore logout errors
+    } finally {
+      clearTokens();
+      set({ user: null, isAuthenticated: false, error: null });
+    }
   },
 
   clearError: () => {
     set({ error: null });
   },
 }));
+
+// Initialize auth state on mount
+export const initializeAuth = () => {
+  const { fetchCurrentUser } = useAuthStore.getState();
+  fetchCurrentUser();
+};
+
+// Role-based utilities
+export const isUserCurator = () => {
+  const { user } = useAuthStore.getState();
+  return user?.role === 'curator';
+};
+
+export const isUserEmployer = () => {
+  const { user } = useAuthStore.getState();
+  return user?.role === 'employer';
+};
+
+export const isUserApplicant = () => {
+  const { user } = useAuthStore.getState();
+  return user?.role === 'applicant';
+};
