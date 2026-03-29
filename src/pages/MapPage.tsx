@@ -1,4 +1,5 @@
 import {
+  Fragment,
   startTransition,
   useDeferredValue,
   useEffect,
@@ -17,7 +18,7 @@ import {
 } from '@/lib/opportunities';
 import type { Coordinates, MapMarker, Opportunity, OpportunityType } from '@/types';
 
-const PAGE_SIZE = 50;
+const PAGE_SIZE = 28;
 
 const filterOptions = [
   { label: 'Все', type: null },
@@ -181,16 +182,6 @@ const describeCompanies = (companyNames: string[]) => {
   return `${companyNames.slice(0, 2).join(', ')} и ещё ${companyNames.length - 2}`;
 };
 
-const mergeOpportunities = (current: Opportunity[], next: Opportunity[]) => {
-  const merged = new globalThis.Map(current.map((opportunity) => [opportunity.id, opportunity]));
-
-  next.forEach((opportunity) => {
-    merged.set(opportunity.id, opportunity);
-  });
-
-  return Array.from(merged.values());
-};
-
 const buildMarkerGroups = (
   opportunities: Opportunity[],
   resolvedCoordinates: Record<string, Coordinates>,
@@ -265,23 +256,20 @@ export function MapPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [total, setTotal] = useState(0);
-  const [nextOffset, setNextOffset] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [detectedCity, setDetectedCity] = useState<string | null>(null);
   const [detectedFromIp, setDetectedFromIp] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resolvedCoordinates, setResolvedCoordinates] = useState<Record<string, Coordinates>>({});
 
   const requestIdRef = useRef(0);
-  const loadOpportunitiesRef = useRef<(mode: 'replace' | 'append') => Promise<void>>(async () => {});
-  const loadMoreTriggerRef = useRef<HTMLDivElement | null>(null);
   const pendingGeocodeKeysRef = useRef(new Set<string>());
 
   const activeType = getFilterType(activeFilter);
   const normalizedQuery = deferredSearchQuery.trim().toLowerCase();
-  const shouldAutoLoad = normalizedQuery.length === 0;
-  const hasMore = opportunities.length < total;
+  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const hasMore = currentPage < totalPages;
 
   const visibleOpportunities = opportunities.filter((opportunity) => {
     const matchesType = activeType === null || opportunity.type === activeType;
@@ -294,29 +282,18 @@ export function MapPage() {
   const markerGroups = buildMarkerGroups(visibleOpportunities, resolvedCoordinates);
   const mapMarkers = buildMapMarkers(markerGroups);
 
-  const loadOpportunities = async (mode: 'replace' | 'append') => {
-    if (mode === 'append' && (isInitialLoading || isLoadingMore || !hasMore)) {
-      return;
-    }
-
+  const loadPage = async (page: number) => {
     const requestId = ++requestIdRef.current;
-    const offset = mode === 'replace' ? 0 : nextOffset;
+    const offset = (page - 1) * PAGE_SIZE;
 
-    if (mode === 'replace') {
-      setIsInitialLoading(true);
-      setIsLoadingMore(false);
-      setError(null);
-      setTotal(0);
-      setNextOffset(0);
-      setDetectedCity(null);
-      setDetectedFromIp(false);
-      startTransition(() => {
-        setOpportunities([]);
-      });
-    } else {
-      setIsLoadingMore(true);
-      setError(null);
-    }
+    setIsInitialLoading(true);
+    setError(null);
+    setTotal(0);
+    setDetectedCity(null);
+    setDetectedFromIp(false);
+    startTransition(() => {
+      setOpportunities([]);
+    });
 
     try {
       const response = await fetchOpportunities({
@@ -330,14 +307,12 @@ export function MapPage() {
       }
 
       setTotal(response.total);
-      setNextOffset(response.offset + response.items.length);
+      setCurrentPage(page);
       setDetectedCity(response.detected_city);
       setDetectedFromIp(response.detected_from_ip);
 
       startTransition(() => {
-        setOpportunities((current) =>
-          mode === 'replace' ? response.items : mergeOpportunities(current, response.items)
-        );
+        setOpportunities(response.items);
       });
     } catch (loadError) {
       if (requestId !== requestIdRef.current) {
@@ -346,56 +321,21 @@ export function MapPage() {
 
       setError(loadError instanceof Error ? loadError.message : 'Не удалось загрузить возможности.');
 
-      if (mode === 'replace') {
-        startTransition(() => {
-          setOpportunities([]);
-        });
-      }
+      startTransition(() => {
+        setOpportunities([]);
+      });
     } finally {
       if (requestId === requestIdRef.current) {
         setIsInitialLoading(false);
-        setIsLoadingMore(false);
       }
     }
   };
 
-  loadOpportunitiesRef.current = loadOpportunities;
+  const loadOpportunitiesRef = useRef<(page: number) => Promise<void>>(loadPage);
 
   useEffect(() => {
-    void loadOpportunitiesRef.current('replace');
+    void loadOpportunitiesRef.current(1);
   }, [activeType]);
-
-  useEffect(() => {
-    const node = loadMoreTriggerRef.current;
-
-    if (!node) {
-      return;
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      const [entry] = entries;
-
-      if (
-        !entry?.isIntersecting
-        || !shouldAutoLoad
-        || isInitialLoading
-        || isLoadingMore
-        || !hasMore
-      ) {
-        return;
-      }
-
-      void loadOpportunitiesRef.current('append');
-    }, {
-      rootMargin: '320px 0px',
-    });
-
-    observer.observe(node);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [hasMore, isInitialLoading, isLoadingMore, shouldAutoLoad]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -507,7 +447,7 @@ export function MapPage() {
 
             <div className="flex flex-wrap gap-2 text-[12px] text-[#d8dcff]">
               <span className="rounded-full bg-[#3f3f8f] px-3 py-1">
-                Загружено {opportunities.length} из {total}
+                Страница {currentPage} из {totalPages || 1}
               </span>
               {detectedCity && (
                 <span className="rounded-full bg-[#4647a2] px-3 py-1">
@@ -531,7 +471,7 @@ export function MapPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    void loadOpportunitiesRef.current(opportunities.length === 0 ? 'replace' : 'append');
+                    void loadOpportunitiesRef.current(1);
                   }}
                   className="rounded-[10px] bg-[#6468d2] px-3 py-2 text-[13px] transition-colors hover:bg-[#7a7edf]"
                 >
@@ -592,27 +532,108 @@ export function MapPage() {
             </div>
           )}
 
-          <div ref={loadMoreTriggerRef} className="h-1" aria-hidden="true" />
+          <div className="mt-8 flex justify-center">
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    void loadOpportunitiesRef.current(currentPage - 1);
+                  }}
+                  disabled={currentPage === 1}
+                  className="rounded-[10px] bg-[#5c5cc0] px-4 py-2 text-white transition-colors hover:bg-[#7373d2] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#5c5cc0]"
+                >
+                  Назад
+                </button>
 
-          <div className="mt-8 flex flex-col items-center gap-3 text-center text-[14px] text-[#d7dbff]">
-            {isLoadingMore && <p>Загружаем ещё возможности...</p>}
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    const isCurrent = page === currentPage;
+                    const isEdge = page === 1 || page === totalPages;
+                    const isNearCurrent = Math.abs(page - currentPage) <= 1;
 
-            {!isInitialLoading && hasMore && !isLoadingMore && (
-              <button
-                type="button"
-                onClick={() => {
-                  void loadOpportunitiesRef.current('append');
-                }}
-                className="rounded-[12px] bg-[#5c5cc0] px-4 py-2 text-white transition-colors hover:bg-[#7373d2]"
-              >
-                {shouldAutoLoad ? 'Загрузить ещё' : 'Продолжить поиск'}
-              </button>
-            )}
+                    if (!isEdge && !isNearCurrent) {
+                      if (page === 2 && currentPage > 3) {
+                        return (
+                          <Fragment key={page}>
+                            <span className="px-2 text-[#8d89d8]">...</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void loadOpportunitiesRef.current(page);
+                              }}
+                              className={`rounded-[10px] px-4 py-2 transition-colors ${
+                                isCurrent
+                                  ? 'bg-[#7a7edf] text-white'
+                                  : 'bg-[#5c5cc0] text-white hover:bg-[#7373d2]'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          </Fragment>
+                        );
+                      }
+                      if (page === totalPages - 1 && currentPage < totalPages - 2) {
+                        return (
+                          <Fragment key={page}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                void loadOpportunitiesRef.current(page);
+                              }}
+                              className={`rounded-[10px] px-4 py-2 transition-colors ${
+                                isCurrent
+                                  ? 'bg-[#7a7edf] text-white'
+                                  : 'bg-[#5c5cc0] text-white hover:bg-[#7373d2]'
+                              }`}
+                            >
+                              {page}
+                            </button>
+                            <span className="px-2 text-[#8d89d8]">...</span>
+                          </Fragment>
+                        );
+                      }
+                      return null;
+                    }
 
-            {!isInitialLoading && !hasMore && opportunities.length > 0 && (
-              <p>Все доступные возможности загружены.</p>
+                    return (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() => {
+                          void loadOpportunitiesRef.current(page);
+                        }}
+                        className={`rounded-[10px] px-4 py-2 transition-colors ${
+                          isCurrent
+                            ? 'bg-[#7a7edf] text-white'
+                            : 'bg-[#5c5cc0] text-white hover:bg-[#7373d2]'
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    void loadOpportunitiesRef.current(currentPage + 1);
+                  }}
+                  disabled={currentPage === totalPages}
+                  className="rounded-[10px] bg-[#5c5cc0] px-4 py-2 text-white transition-colors hover:bg-[#7373d2] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#5c5cc0]"
+                >
+                  Вперёд
+                </button>
+              </div>
             )}
           </div>
+
+          {!isInitialLoading && !hasMore && opportunities.length > 0 && (
+            <div className="mt-4 text-center text-[14px] text-[#d7dbff]">
+              Все возможности показаны
+            </div>
+          )}
         </section>
       </main>
 
