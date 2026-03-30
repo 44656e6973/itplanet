@@ -1,177 +1,162 @@
-# ItPlanet — React приложение с картами
+# ItPlanet
 
-Приложение на React с использованием карт OpenStreetMap, стейт-менеджментом Zustand и стилизацией Tailwind CSS.
+Фронтенд-приложение на React и TypeScript с картой возможностей, страницами входа и регистрации, а также клиентской авторизацией на `access_token` / `refresh_token`.
 
-## 🚀 Стек технологий
+## Стек
 
-- **React 19** — UI библиотека
-- **TypeScript** — типизация
-- **Tailwind CSS** — утилитарные стили
-- **React-Leaflet** — работа с картами
-- **Zustand** — управление состоянием
-- **Vite** — сборщик
+- React 19
+- TypeScript
+- Vite
+- Tailwind CSS
+- Zustand
+- MapLibre GL + `react-map-gl`
+- React Router
 
-## 📦 Установка
+## Возможности
+
+- Главная страница с картой и списком возможностей
+- Поиск, фильтрация и бесконечная подгрузка карточек на главной странице
+- Страницы входа и регистрации
+- Регистрация для двух ролей: `applicant` и `employer`
+- Проверка ИНН работодателя перед регистрацией
+- Хранение `access_token` и `refresh_token` в `localStorage`
+- Автообновление токенов каждые 60 минут через `/auth/refresh`
+
+## Карта
+
+Карта построена на `MapLibre GL`, а подложка берётся из OpenStreetMap raster tiles. На главной странице маркеры строятся по данным `/api/v1/opportunities`: если backend вернул `location.lat/lng`, используются они, иначе адрес геокодируется на клиенте.
+
+## Авторизация
+
+Авторизация реализована в [`src/stores/authStore.ts`](./src/stores/authStore.ts).
+
+- Логин отправляется на `POST {VITE_API_URL}/auth/login`
+- Регистрация отправляется на `POST {VITE_API_URL}/auth/register`
+- Обновление токенов отправляется на `POST {VITE_API_URL}/auth/refresh`
+- Для refresh-запроса `refresh_token` передаётся в JSON-теле запроса
+- Токены сохраняются в `localStorage` через `zustand/persist`
+- Ключ хранилища: `auth-storage`
+- При неуспешном refresh пользователь разлогинивается
+
+Автообновление токенов запускается из [`src/hooks/useTokenRefresh.ts`](./src/hooks/useTokenRefresh.ts) и подключено в [`src/App.tsx`](./src/App.tsx).
+
+## Переменные окружения
+
+Скопируйте пример и при необходимости настройте значения:
+
+```bash
+cp .env.example .env
+```
+
+Доступные переменные:
+
+```env
+VITE_API_URL=/api/v1
+VITE_2GIS_API_KEY=
+```
+
+`VITE_API_URL` используется для запросов к backend API. `VITE_2GIS_API_KEY` сейчас зарезервирован в `.env.example`, но в текущем коде не используется.
+
+## Запуск проекта
+
+Установка зависимостей:
 
 ```bash
 npm install
 ```
 
-## 🛠 Разработка
+Запуск в режиме разработки:
 
 ```bash
 npm run dev
 ```
 
-Приложение запустится на `http://localhost:5173`
+По умолчанию приложение будет доступно на `http://localhost:5173`.
 
-## 🏗 Архитектура проекта
+## Скрипты
 
+```bash
+npm run dev
+npm run build
+npm run preview
+npm run lint
+npm run test
+npm run test:ui
+npm run test:coverage
 ```
+
+## Маршруты
+
+- `/` — главная страница с картой и возможностями
+- `/login` — страница входа
+- `/register` — страница регистрации
+
+## Структура проекта
+
+```text
 src/
-├── components/          # React компоненты
-│   ├── map/           # Компоненты карты
-│   │   ├── Map.tsx              # Основной компонент карты
-│   │   └── AddMarkerForm.tsx    # Форма добавления маркера
-│   └── ui/            # UI компоненты (кнопки, инпуты и т.д.)
-├── hooks/             # Кастомные хуки
-│   └── useMap.ts      # Хуки для работы с картой
-├── pages/             # Страницы приложения
-│   └── MapPage.tsx    # Страница с картой
-├── stores/            # Zustand сторы
-│   └── mapStore.ts    # Стор для состояния карты
-├── types/             # TypeScript типы
-│   └── index.ts       # Основные типы приложения
-├── App.tsx            # Корневой компонент
-└── index.css          # Глобальные стили
+├── components/
+│   ├── auth/            # Формы входа и регистрации
+│   ├── common/          # Header и Footer
+│   ├── map/             # Компоненты карты
+│   └── ui/              # Базовые UI-компоненты
+├── hooks/
+│   ├── useMap.ts        # Хуки для mapStore
+│   └── useTokenRefresh.ts
+├── pages/
+│   ├── LoginPage.tsx
+│   ├── MapPage.tsx
+│   └── RegisterPage.tsx
+├── stores/
+│   ├── authStore.ts
+│   └── mapStore.ts
+├── types/
+│   └── index.ts
+├── App.tsx
+├── main.tsx
+└── router.tsx
 ```
 
-## 📝 Основные возможности
+## Состояние приложения
 
-### Работа с картой
+### `authStore`
 
-- **Просмотр карты** — перемещение и масштабирование
-- **Добавление маркеров** — клик по карте открывает форму добавления
-- **Удаление маркеров** — через popup маркера
-- **Информационная панель** — отображает текущее состояние карты
+Хранит:
 
-### Управление состоянием (Zustand)
+- пользователя
+- `accessToken`
+- `refreshToken`
+- `tokenRefreshedAt`
+- флаги `isAuthenticated`, `isLoading`
+- текст ошибки авторизации
 
-Состояние карты включает:
+### `mapStore`
 
-```typescript
-interface MapState {
-  center: Coordinates;      // Центр карты
-  zoom: number;             // Уровень зума
-  markers: MapMarker[];     // Список маркеров
-  selectedMarkerId: string | null;  // Выбранный маркер
-}
-```
+Поддерживает:
 
-Действия:
+- центр карты
+- zoom
+- список маркеров
+- выбранный маркер
 
-- `setCenter` — установить центр карты
-- `setZoom` — установить зум
-- `addMarker` — добавить маркер
-- `removeMarker` — удалить маркер
-- `updateMarker` — обновить маркер
-- `selectMarker` — выбрать маркер
-- `resetMap` — сбросить карту к начальным значениям
+## Особенности регистрации
 
-## 🎯 Использование хуков
+- Для `applicant` регистрация проходит в один шаг
+- Для `employer` форма разделена на два шага
+- Перед созданием работодателя вызывается `POST {VITE_API_URL}/companies/verify-inn`
+- Пароль валидируется на клиенте: минимум 12 символов, заглавная буква, цифра и спецсимвол
 
-### useMapView
-
-```typescript
-const { center, zoom, setCenter, setZoom, resetMap } = useMapView();
-```
-
-### useMarkers
-
-```typescript
-const { markers, addMarker, removeMarker, updateMarker } = useMarkers();
-```
-
-### useSelectedMarker
-
-```typescript
-const { selectedMarkerId, selectedMarker, selectMarker } = useSelectedMarker();
-```
-
-## 🧩 Компоненты
-
-### Map
-
-Основной компонент карты:
-
-```tsx
-<Map 
-  className="h-full w-full" 
-  onMarkerClick={(id) => console.log(id)}
-  onMapClick={(coords) => console.log(coords)}
-/>
-```
-
-### AddMarkerForm
-
-Форма добавления маркера:
-
-```tsx
-<AddMarkerForm 
-  position={{ lat: 55.7558, lng: 37.6173 }} 
-  onClose={() => setShowForm(false)} 
-/>
-```
-
-## 📄 Сборка
+## Сборка
 
 ```bash
 npm run build
 ```
 
-## ▶️ Предпросмотр сборки
+## Полезные ссылки
 
-```bash
-npm run preview
-```
-
-## 🔧 Линтинг
-
-```bash
-npm run lint
-```
-
-## 📚 Структура типов
-
-```typescript
-interface Coordinates {
-  lat: number;
-  lng: number;
-}
-
-interface MapMarker {
-  id: string;
-  position: Coordinates;
-  title: string;
-  description?: string;
-}
-```
-
-## 🎨 Стилизация
-
-Проект использует Tailwind CSS с поддержкой темной темы через `prefers-color-scheme`.
-
-Основные утилиты:
-
-- `h-screen`, `w-screen` — полная высота/ширина экрана
-- `absolute`, `relative` — позиционирование
-- `z-[1000]` — слои поверх карты
-- `bg-white/90 backdrop-blur` — полупрозрачные панели
-
-## 🔗 Полезные ссылки
-
-- [React документация](https://react.dev/)
-- [Zustand документация](https://zustand-demo.pmnd.rs/)
-- [React-Leaflet документация](https://react-leaflet.js.org/)
-- [Tailwind CSS документация](https://tailwindcss.com/docs)
-- [OpenStreetMap](https://www.openstreetmap.org/)
+- [React](https://react.dev/)
+- [Vite](https://vite.dev/)
+- [Zustand](https://zustand.docs.pmnd.rs/)
+- [MapLibre GL JS](https://maplibre.org/maplibre-gl-js/docs/)
+- [react-map-gl](https://visgl.github.io/react-map-gl/)
+- [Tailwind CSS](https://tailwindcss.com/docs)
