@@ -24,6 +24,16 @@ export const Header = () => {
     navigate('/login');
   };
 
+  const handleProfile = () => {
+    if (user?.role === 'employer') {
+      navigate('/employer/company');
+    } else if (user?.role === 'applicant') {
+      navigate('/applicant/profile');
+    } else if (user?.role === 'curator') {
+      navigate('/curator/dashboard');
+    }
+  };
+
   return (
     <header className="bg-[var(--app-surface)] text-[#f3f2ff]">
       <nav className="mx-auto flex h-[54px] max-w-[1108px] items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -37,9 +47,12 @@ export const Header = () => {
         <div className="flex items-center gap-6 text-[14px] text-[#ececff] sm:gap-8">
           {isAuthenticated ? (
             <>
-              <span className="hidden text-[13px] text-[#d6d8ff] sm:block">
+              <button
+                onClick={handleProfile}
+                className="transition-colors hover:text-white"
+              >
                 {user?.email}
-              </span>
+              </button>
               <button
                 onClick={handleLogout}
                 className="transition-colors hover:text-white"
